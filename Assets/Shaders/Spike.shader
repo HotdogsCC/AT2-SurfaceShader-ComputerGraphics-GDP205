@@ -18,7 +18,8 @@ Shader "Charlie/SpikeShader"
         
         [Space]
         
-        _MaxHeight ("Max Height", float) = 0.5
+        _MaxHeight ("Max Height", Range(0.0, 1.0)) = 0.5
+        _AmbientStrength ("Ambient Strength", Range(0.0, 1.0)) = 0.5
     }
     SubShader
     {
@@ -32,6 +33,7 @@ Shader "Charlie/SpikeShader"
             #pragma fragment frag
 
             #include "UnityCG.cginc"
+            #include "Lighting.cginc"
 
             struct appdata
             {
@@ -42,6 +44,7 @@ Shader "Charlie/SpikeShader"
 
             struct v2f
             {
+                float3 normal : NORMAL;
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
                 float height : TEXCOORD1; //how much extra height was added in the vert
@@ -57,6 +60,7 @@ Shader "Charlie/SpikeShader"
             float3 _RotationSpeeds;
 
             float _MaxHeight;
+            float _AmbientStrength;
             
             float4x4 RotationMatrix(float3 angles)
             {
@@ -90,8 +94,9 @@ Shader "Charlie/SpikeShader"
                 normal *= height * _MaxHeight;
                 o.vertex += float4(normal, 0);
 
-                //rotate the vert
+                //rotate the vert and normals
                 o.vertex = mul(o.vertex, RotationMatrix(_RotationSpeeds));
+                o.normal = mul(v.normal, RotationMatrix(_RotationSpeeds));
                 
                 //apply the height
                 o.vertex = UnityObjectToClipPos(o.vertex);
@@ -104,9 +109,21 @@ Shader "Charlie/SpikeShader"
 
             fixed4 frag (v2f i) : SV_Target
             {
+                //albedo
                 float height = i.height / _MaxHeight;
-                float4 col = (_OuterColour * height) + (_InnerColour * (1 - height));
-                return col;
+                float4 albedo = (_OuterColour * height) + (_InnerColour * (1 - height));
+
+                //diffuse
+                float3 lightDir = _WorldSpaceLightPos0.xyz;
+                float3 lightColor = _LightColor0.rgb;
+                float3 diffuse = saturate(dot(lightDir, i.normal)) * lightColor;
+
+                //ambient
+                float3 ambient = _AmbientStrength * lightColor;
+
+                //total
+                float3 totalColor = (diffuse + ambient) * albedo;
+                return float4(totalColor, 1.0f);
             }
             ENDHLSL
         }
