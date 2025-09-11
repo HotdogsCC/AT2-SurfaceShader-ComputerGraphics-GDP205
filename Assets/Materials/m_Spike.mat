@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: m_Planet
+  m_Name: m_Spike
   m_Shader: {fileID: 4800000, guid: a8a06ed2199c7ef4ab5bc5c76b91f0bc, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -73,7 +73,7 @@ Material:
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _HeightMap: 0
-    - _MaxHeight: 0.63
+    - _MaxHeight: 0.46
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1

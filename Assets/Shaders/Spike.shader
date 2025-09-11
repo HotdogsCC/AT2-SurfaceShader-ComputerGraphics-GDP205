@@ -1,4 +1,4 @@
-Shader "Unlit/PlanetShader"
+Shader "Charlie/SpikeShader"
 {
     Properties
     {
@@ -6,7 +6,8 @@ Shader "Unlit/PlanetShader"
         
         [Space]
         
-        _Colour ("Color", Color) = (1, 0, 0, 1)
+        _OuterColour ("Color", Color) = (1, 0, 0, 1)
+        _InnerColour ("Color", Color) = (0, 0, 0, 1)
         
         [Space]
         
@@ -46,7 +47,8 @@ Shader "Unlit/PlanetShader"
             
             sampler2D _HeightMap;
 
-            float4 _Colour;
+            float4 _OuterColour;
+            float4 _InnerColour;
             
             float _XSpeed;
             float _YSpeed;
@@ -78,13 +80,13 @@ Shader "Unlit/PlanetShader"
                 //save the height
                 o.height = length(normal);
                 
-                return o;
+                return o; 
             }
 
             fixed4 frag (v2f i) : SV_Target
             {
                 float height = i.height / _MaxHeight;
-                float4 col = _Colour * height;
+                float4 col = (_OuterColour * height) + (_InnerColour * (1 - height));
                 return col;
             }
             ENDHLSL
