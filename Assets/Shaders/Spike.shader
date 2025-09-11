@@ -3,6 +3,7 @@ Shader "Charlie/SpikeShader"
     Properties
     {
         _HeightMap ("Height Map", 2D) = "black" {}
+        [NoScaleOffset] _NormalTex("Normal Map", 2D) = "bump" {}
         
         [Space]
         
@@ -39,18 +40,21 @@ Shader "Charlie/SpikeShader"
             {
                 float4 vertex : POSITION;
                 float3 normal : NORMAL;
+                float4 tangent : TANGENT;
                 float2 uv : TEXCOORD0;
             };
 
             struct v2f
             {
                 float3 normal : NORMAL;
+                float4 tangent : TANGENT;
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
                 float height : TEXCOORD1; //how much extra height was added in the vert
             };
             
             sampler2D _HeightMap;
+            sampler2D _NormalTex;
 
             float4 _OuterColour;
             float4 _InnerColour;
@@ -97,6 +101,10 @@ Shader "Charlie/SpikeShader"
                 //rotate the vert and normals
                 o.vertex = mul(o.vertex, RotationMatrix(_RotationSpeeds));
                 o.normal = mul(v.normal, RotationMatrix(_RotationSpeeds));
+
+                //update the tangent
+                o.tangent = mul(v.tangent, RotationMatrix(_RotationSpeeds));
+                //o.tangent = float4(UnityObjectToWorldDir(o.tangent.xyz), o.tangent.w);
                 
                 //apply the height
                 o.vertex = UnityObjectToClipPos(o.vertex);
@@ -109,6 +117,17 @@ Shader "Charlie/SpikeShader"
 
             fixed4 frag (v2f i) : SV_Target
             {
+                //apply normal map
+                i.normal = UnpackScaleNormal(tex2D(_NormalTex, i.uv), 0.25);
+                i.normal = i.normal.xzy;
+                i.normal = normalize(i.normal);
+                float3 biTangent = cross(i.normal, i.tangent.xzy) * i.tangent.w;
+                i.normal = normalize(i.normal.x * i.tangent +
+                                        i.normal.y * i.normal +
+                                        i.normal.z * biTangent);
+
+
+                
                 //albedo
                 float height = i.height / _MaxHeight;
                 float4 albedo = (_OuterColour * height) + (_InnerColour * (1 - height));
