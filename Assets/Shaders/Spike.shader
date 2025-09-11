@@ -6,13 +6,15 @@ Shader "Charlie/SpikeShader"
         
         [Space]
         
-        _OuterColour ("Color", Color) = (1, 0, 0, 1)
-        _InnerColour ("Color", Color) = (0, 0, 0, 1)
+        _OuterColour ("Outer Color", Color) = (1, 0, 0, 1)
+        _InnerColour ("Inner Color", Color) = (0, 0, 0, 1)
         
         [Space]
         
-        _XSpeed ("X Speed", Range(-1.0, 1.0)) = 0.3
-        _YSpeed ("Y Speed", Range(-1.0, 1.0)) = -0.1
+        _XSpeed ("Spike X Speed", Range(-1.0, 1.0)) = 0.3
+        _YSpeed ("Spike Y Speed", Range(-1.0, 1.0)) = -0.1
+        
+        _RotationSpeeds ("Rotation Speeds", Vector) = (0,0,0)
         
         [Space]
         
@@ -52,9 +54,23 @@ Shader "Charlie/SpikeShader"
             
             float _XSpeed;
             float _YSpeed;
+            float3 _RotationSpeeds;
 
             float _MaxHeight;
             
+            float4x4 RotationMatrix(float3 angles)
+            {
+                float a = _Time[0] * angles.z;
+                float b = _Time[0] * angles.y;
+                float y = _Time[0] * angles.x;
+                return float4x4(
+                    cos(a)*cos(b), cos(a)*sin(b)*sin(y) - sin(a)*cos(y), cos(a)*sin(b)*cos(y) + sin(a)*sin(y), 0,
+                    sin(a)*cos(b), sin(a)*sin(b)*sin(y) + cos(a)*cos(y), sin(a)*sin(b)*cos(y) - cos(a)*sin(y), 0,
+                    -sin(b), cos(b)*sin(y), cos(b)*cos(y), 0,
+                    0, 0, 0, 1
+
+                );
+            }
 
             v2f vert (appdata v)
             {
@@ -74,6 +90,9 @@ Shader "Charlie/SpikeShader"
                 normal *= height * _MaxHeight;
                 o.vertex += float4(normal, 0);
 
+                //rotate the vert
+                o.vertex = mul(o.vertex, RotationMatrix(_RotationSpeeds));
+                
                 //apply the height
                 o.vertex = UnityObjectToClipPos(o.vertex);
 
