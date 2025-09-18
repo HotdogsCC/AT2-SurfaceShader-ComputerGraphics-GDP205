@@ -2,7 +2,10 @@ Shader "Charlie/SpikeShader"
 {
     Properties
     {
+        _NormalMap ("Normal Map", 2D) = "bump" {}
+        _NormalStrength ("Normal Strength", Range(0, 2)) = 1
         _HeightMap ("Height Map", 2D) = "black" {}
+        
         
         [Space]
         
@@ -39,6 +42,7 @@ Shader "Charlie/SpikeShader"
             {
                 float4 vertex : POSITION;
                 float3 normal : NORMAL;
+                float4 tangent : TANGENT;
                 float2 uv : TEXCOORD0;
             };
 
@@ -48,8 +52,11 @@ Shader "Charlie/SpikeShader"
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
                 float height : TEXCOORD1; //how much extra height was added in the vert
+                float3x3 TBN : TEXCOORD2;
             };
-            
+
+            sampler2D _NormalMap;
+            float _NormalStrength;
             sampler2D _HeightMap;
 
             float4 _OuterColour;
@@ -103,12 +110,23 @@ Shader "Charlie/SpikeShader"
 
                 //save the height
                 o.height = length(normal);
+
+                // Build tangent-to-world matrix
+                float3 normalWS  = UnityObjectToWorldNormal(v.normal);
+                float3 tangentWS = UnityObjectToWorldDir(v.tangent.xyz);
+                float3 bitangentWS = cross(normalWS, tangentWS) * v.tangent.w;
+
+                o.TBN = float3x3(tangentWS, bitangentWS, normalWS);
                 
                 return o; 
             }
 
             fixed4 frag (v2f i) : SV_Target
             {
+                // Transform tangent-space normal to world space
+                float3 tangentNormal = UnpackScaleNormal(tex2D(_NormalMap, i.uv), _NormalStrength);
+                float3 normalWS = normalize(mul(i.TBN, tangentNormal));
+                
                 //albedo
                 float height = i.height / _MaxHeight;
                 float4 albedo = (_OuterColour * height) + (_InnerColour * (1 - height));
@@ -116,7 +134,8 @@ Shader "Charlie/SpikeShader"
                 //diffuse
                 float3 lightDir = _WorldSpaceLightPos0.xyz;
                 float3 lightColor = _LightColor0.rgb;
-                float3 diffuse = saturate(dot(lightDir, i.normal)) * lightColor;
+                float NdotL = saturate(dot(normalWS, lightDir));
+                float3 diffuse = NdotL * lightColor;
 
                 //ambient
                 float3 ambient = _AmbientStrength * lightColor;
