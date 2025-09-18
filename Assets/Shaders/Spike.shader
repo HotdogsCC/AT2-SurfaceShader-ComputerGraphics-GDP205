@@ -4,13 +4,15 @@ Shader "Charlie/SpikeShader"
     {
         _NormalMap ("Normal Map", 2D) = "bump" {}
         _NormalStrength ("Normal Strength", Range(0, 2)) = 1
-        _HeightMap ("Height Map", 2D) = "black" {}
-        
         
         [Space]
         
-        _OuterColour ("Outer Color", Color) = (1, 0, 0, 1)
-        _InnerColour ("Inner Color", Color) = (0, 0, 0, 1)
+        _HeightMap ("Height Map", 2D) = "black" {}
+        
+        [Space]
+        
+        _OuterTexture ("Outer Texture", 2D) = "white" {}
+        _InnerTexture ("Inner Texture", 2D) = "white" {}
         
         [Space]
         
@@ -59,8 +61,8 @@ Shader "Charlie/SpikeShader"
             float _NormalStrength;
             sampler2D _HeightMap;
 
-            float4 _OuterColour;
-            float4 _InnerColour;
+            sampler2D _OuterTexture;
+            sampler2D _InnerTexture;
             
             float _XSpeed;
             float _YSpeed;
@@ -129,7 +131,9 @@ Shader "Charlie/SpikeShader"
                 
                 //albedo
                 float height = i.height / _MaxHeight;
-                float4 albedo = (_OuterColour * height) + (_InnerColour * (1 - height));
+                fixed4 outerColour = tex2D(_OuterTexture, i.uv);
+                fixed4 innerColour = tex2D(_InnerTexture, i.uv);
+                float4 albedo = (outerColour * height) + (innerColour * (1 - height));
 
                 //diffuse
                 float3 lightDir = _WorldSpaceLightPos0.xyz;
