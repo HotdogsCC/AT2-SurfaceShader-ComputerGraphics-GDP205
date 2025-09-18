@@ -112,7 +112,7 @@ Shader "Charlie/SpikeShader"
                 o.height = length(normal);
 
                 // Build tangent-to-world matrix
-                float3 normalWS  = UnityObjectToWorldNormal(v.normal);
+                float3 normalWS  = UnityObjectToWorldNormal(o.normal);
                 float3 tangentWS = UnityObjectToWorldDir(v.tangent.xyz);
                 float3 bitangentWS = cross(normalWS, tangentWS) * v.tangent.w;
 
