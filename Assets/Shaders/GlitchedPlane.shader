@@ -7,6 +7,7 @@ Shader "Charlie/GlitchedPlane"
         
         [Space]
         
+        //for the spikes
         _HeightMap ("Height Map", 2D) = "black" {}
         
         [Space]
@@ -16,18 +17,21 @@ Shader "Charlie/GlitchedPlane"
         
         [Space]
         
+        //where the glitch effect will take place
+        //black for off, anything else for on
         _GlitchMap ("Glitch Map", 2D) = "white" {}
 
         [Space]
         
+        //how fast we scroll along the height map
         _XSpeed ("Spike X Speed", Range(-1.0, 1.0)) = 0.3
         _YSpeed ("Spike Y Speed", Range(-1.0, 1.0)) = -0.1
         
-        _RotationSpeeds ("Rotation Speeds", Vector) = (0,0,0)
-        
         [Space]
         
+        //how high the spikes are
         _MaxHeight ("Max Height", Float) = 0.5
+        
         _AmbientStrength ("Ambient Strength", Range(0.0, 1.0)) = 0.5
     }
     SubShader
@@ -44,6 +48,7 @@ Shader "Charlie/GlitchedPlane"
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
 
+            //vertex pass information
             struct appdata
             {
                 float4 vertex : POSITION;
@@ -52,6 +57,7 @@ Shader "Charlie/GlitchedPlane"
                 float2 uv : TEXCOORD0;
             };
 
+            //fragement pass information
             struct v2f
             {
                 float3 normal : NORMAL;
@@ -75,7 +81,8 @@ Shader "Charlie/GlitchedPlane"
 
             float _MaxHeight;
             float _AmbientStrength;
-            
+
+            //returns a matrix with our angles
             float4x4 RotationMatrix(float3 angles)
             {
                 float a = _Time[0] * angles.z;
@@ -90,15 +97,15 @@ Shader "Charlie/GlitchedPlane"
                 );
             }
 
+            //vertex shader
             v2f vert (appdata v)
             {
                 v2f o;
 
+                //grab the input vertex and uv
                 o.vertex = v.vertex;
                 o.uv = v.uv;
-
                 
-
                 //sample the glitch map
                 float4 glitchSample = tex2Dlod(_GlitchMap, float4(o.uv[0], o.uv[1], 0, 0));
                 //only apply height if isnt 0
@@ -127,19 +134,21 @@ Shader "Charlie/GlitchedPlane"
                 //save the height
                 o.height = length(normal);
 
-                // Build tangent-to-world matrix
+                //build tangent-to-world matrix
                 float3 normalWS  = UnityObjectToWorldNormal(o.normal);
                 float3 tangentWS = UnityObjectToWorldDir(v.tangent.xyz);
                 float3 bitangentWS = cross(normalWS, tangentWS) * v.tangent.w;
 
+                //set the tangent, bitangent, and normal
                 o.TBN = float3x3(tangentWS, bitangentWS, normalWS);
                 
                 return o; 
             }
 
+            //fragment shader
             fixed4 frag (v2f i) : SV_Target
             {
-                // Transform tangent-space normal to world space
+                //transform tangent space normal to world space
                 float3 tangentNormal = UnpackScaleNormal(tex2D(_NormalMap, i.uv), _NormalStrength);
                 float3 normalWS = normalize(mul(i.TBN, tangentNormal));
                 

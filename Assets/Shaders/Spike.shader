@@ -7,6 +7,7 @@ Shader "Charlie/SpikeShader"
         
         [Space]
         
+        //for the spikes
         _HeightMap ("Height Map", 2D) = "black" {}
         
         [Space]
@@ -19,11 +20,14 @@ Shader "Charlie/SpikeShader"
         _XSpeed ("Spike X Speed", Range(-1.0, 1.0)) = 0.3
         _YSpeed ("Spike Y Speed", Range(-1.0, 1.0)) = -0.1
         
+        //how fast we scroll along the height map
         _RotationSpeeds ("Rotation Speeds", Vector) = (0,0,0)
         
         [Space]
         
+        //how high the spikes are
         _MaxHeight ("Max Height", Range(0.0, 1.0)) = 0.5
+        
         _AmbientStrength ("Ambient Strength", Range(0.0, 1.0)) = 0.5
     }
     SubShader
