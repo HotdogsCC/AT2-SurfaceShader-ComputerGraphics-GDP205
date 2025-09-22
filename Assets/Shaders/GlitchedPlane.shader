@@ -119,14 +119,11 @@ Shader "Charlie/GlitchedPlane"
                 float4 glitchSample = tex2Dlod(_GlitchMap, float4(o.uv[0], o.uv[1], 0, 0));
                 //only apply height if isnt 0
                 float height = 0;
-                if (glitchSample[0] > 0)
-                {
-                    //sample the height map
-                    float uSample = o.uv[0] + (_Time[0] * _XSpeed);
-                    float vSample = o.uv[1] + (_Time[0] * _YSpeed);
-                    float4 heightSample = tex2Dlod(_HeightMap, float4(uSample, vSample, 0, 0));
-                    height = heightSample[0];
-                }
+                //sample the height map
+                float uSample = o.uv[0] + (_Time[0] * _XSpeed);
+                float vSample = o.uv[1] + (_Time[0] * _YSpeed);
+                float4 heightSample = tex2Dlod(_HeightMap, float4(uSample, vSample, 0, 0)) * glitchSample;
+                height = heightSample[0];
 
                 //add it to the height
                 float3 normal = v.normal;
