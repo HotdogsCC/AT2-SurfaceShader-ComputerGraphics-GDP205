@@ -3,7 +3,6 @@ Shader "Charlie/GlitchedPlane"
     Properties
     {
         _NormalMap ("Normal Map", 2D) = "bump" {}
-        _NormalStrength ("Normal Strength", Range(0, 2)) = 1
         
         [Space]
         
@@ -41,15 +40,22 @@ Shader "Charlie/GlitchedPlane"
 
         Pass
         {
+            Tags
+            {
+                "RenderType" = "Opaque"
+                "RenderPipeline" = "UniversalPipeline"
+            }
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
 
-            #include "UnityCG.cginc"
-            #include "Lighting.cginc"
+            //#include "UnityCG.cginc"
+            //#include "Lighting.cginc"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             //vertex pass information
-            struct appdata
+            struct Attributes
             {
                 float4 vertex : POSITION;
                 float3 normal : NORMAL;
@@ -67,20 +73,23 @@ Shader "Charlie/GlitchedPlane"
                 float3x3 TBN : TEXCOORD2;
             };
 
+            
             sampler2D _NormalMap;
-            float _NormalStrength;
             sampler2D _HeightMap;
             sampler2D _GlitchMap;
 
             sampler2D _OuterTexture;
             sampler2D _InnerTexture;
-            
+
+
+            CBUFFER_START(UnityPerMaterial)
             float _XSpeed;
             float _YSpeed;
             float3 _RotationSpeeds;
 
             float _MaxHeight;
             float _AmbientStrength;
+            CBUFFER_END
 
             //returns a matrix with our angles
             float4x4 RotationMatrix(float3 angles)
@@ -98,7 +107,7 @@ Shader "Charlie/GlitchedPlane"
             }
 
             //vertex shader
-            v2f vert (appdata v)
+            v2f vert (Attributes v)
             {
                 v2f o;
 
@@ -129,14 +138,14 @@ Shader "Charlie/GlitchedPlane"
                 o.normal = mul(v.normal, RotationMatrix(_RotationSpeeds));
                 
                 //apply the height
-                o.vertex = UnityObjectToClipPos(o.vertex);
+                o.vertex = TransformObjectToHClip(o.vertex);
 
                 //save the height
                 o.height = length(normal);
 
                 //build tangent-to-world matrix
-                float3 normalWS  = UnityObjectToWorldNormal(o.normal);
-                float3 tangentWS = UnityObjectToWorldDir(v.tangent.xyz);
+                float3 normalWS  = TransformObjectToWorldNormal(o.normal);
+                float3 tangentWS = TransformObjectToWorldDir(v.tangent.xyz);
                 float3 bitangentWS = cross(normalWS, tangentWS) * v.tangent.w;
 
                 //set the tangent, bitangent, and normal
@@ -146,21 +155,21 @@ Shader "Charlie/GlitchedPlane"
             }
 
             //fragment shader
-            fixed4 frag (v2f i) : SV_Target
+            float3 frag (v2f i) : SV_Target
             {
                 //transform tangent space normal to world space
-                float3 tangentNormal = UnpackScaleNormal(tex2D(_NormalMap, i.uv), _NormalStrength);
+                float3 tangentNormal = UnpackNormal(tex2D(_NormalMap, i.uv));
                 float3 normalWS = normalize(mul(i.TBN, tangentNormal));
                 
                 //albedo
                 float height = i.height / _MaxHeight;
-                fixed4 outerColour = tex2D(_OuterTexture, i.uv);
-                fixed4 innerColour = tex2D(_InnerTexture, i.uv);
-                float4 albedo = (outerColour * height) + (innerColour * (1 - height));
+                float4 outerColour = tex2D(_OuterTexture, i.uv);
+                float4 innerColour = tex2D(_InnerTexture, i.uv);
+                float4 albedo = (outerColour * height) + (innerColour * (1 - height)); //blend between outer and inner colours
 
                 //diffuse
-                float3 lightDir = _WorldSpaceLightPos0.xyz;
-                float3 lightColor = _LightColor0.rgb;
+                float3 lightDir = GetMainLight().direction;
+                float3 lightColor = GetMainLight().color;
                 float NdotL = saturate(dot(normalWS, lightDir));
                 float3 diffuse = NdotL * lightColor;
 
@@ -168,8 +177,7 @@ Shader "Charlie/GlitchedPlane"
                 float3 ambient = _AmbientStrength * lightColor;
 
                 //total
-                float3 totalColor = (diffuse + ambient) * albedo;
-                return float4(totalColor, 1.0f);
+                return (diffuse + ambient) * albedo;
             }
             ENDHLSL
         }
