@@ -41,15 +41,18 @@ public class TextureDrawer : MonoBehaviour
 
     void Update()
     {
-        //on left click
-        if (Input.GetMouseButton(0))
+        //on any touch
+        if(Input.touchCount > 0)
         {
-            //figure out where the mouse lands
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            //get touch information
+            Touch touch = Input.GetTouch(0);
+
+            //figure out where the finger is on the texture
+            Ray ray = Camera.main.ScreenPointToRay(touch.position);
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 //draw on the texture
-                Paint(hit.textureCoord); 
+                Paint(hit.textureCoord);
             }
         }
         
@@ -61,7 +64,7 @@ public class TextureDrawer : MonoBehaviour
     }
 
     //makes the texture go back to black
-    void ResetColours()
+    public void ResetColours()
     {
         Color[] cols = new Color[textureSize * textureSize];
         for (int i = 0; i < cols.Length; i++) cols[i] = Color.black;
