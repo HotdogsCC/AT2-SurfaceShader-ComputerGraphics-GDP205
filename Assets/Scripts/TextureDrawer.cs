@@ -1,5 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 public class TextureDrawer : MonoBehaviour
@@ -21,11 +20,29 @@ public class TextureDrawer : MonoBehaviour
     
     //the renderer of this game object
     private Renderer rend;
+    
+    //the main camera
+    private Camera mainCamera;
 
-    void Start()
+    private void OnEnable()
     {
+        //get the camera
+        mainCamera = Camera.main;
+
+        //check we got the camera
+        if (mainCamera == null)
+        {
+            Debug.LogError("Failed to find Main Camera in Texture Drawer");
+        }
+        
         //get the renderer
         rend = GetComponent<Renderer>();
+        
+        //check we got the renderer
+        if (rend == null)
+        {
+            Debug.LogError("Failed to get Renderer in Texture Drawer");
+        }
 
         //create a black texture
         paintTex = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
@@ -33,33 +50,22 @@ public class TextureDrawer : MonoBehaviour
 
         //set the glitch map of this plane to our new texture
         rend.material.SetTexture(GlitchMap, paintTex);
-
-        //make sure the mesh has a collider
-        if (GetComponent<Collider>() == null)
-            gameObject.AddComponent<MeshCollider>();
     }
 
-    void Update()
+    private void Update()
     {
-        //on any touch
-        if(Input.touchCount > 0)
-        {
-            //get touch information
-            Touch touch = Input.GetTouch(0);
-
-            //figure out where the finger is on the texture
-            Ray ray = Camera.main.ScreenPointToRay(touch.position);
-            if (Physics.Raycast(ray, out RaycastHit hit))
-            {
-                //draw on the texture
-                Paint(hit.textureCoord);
-            }
-        }
+        //check we have touch input
+        if (Input.touchCount <= 0) return;
         
-        //reset on space
-        if (Input.GetKeyDown(KeyCode.Space))
+        //get touch information
+        Touch touch = Input.GetTouch(0);
+
+        //figure out where the finger is on the texture
+        Ray ray = mainCamera.ScreenPointToRay(touch.position);
+        if (Physics.Raycast(ray, out RaycastHit hit))
         {
-            ResetColours();
+            //draw on the texture
+            Paint(hit.textureCoord);
         }
     }
 
@@ -73,7 +79,7 @@ public class TextureDrawer : MonoBehaviour
     }
     
     //draws in the surrounding areas on the texture
-    void Paint(Vector2 uv)
+    private void Paint(Vector2 uv)
     {
         //dimensions on the mesh
         int x = (int)(uv.x * textureSize);
@@ -84,13 +90,18 @@ public class TextureDrawer : MonoBehaviour
         {
             for (int j = -brushSize; j < brushSize; j++)
             {
+                //for this pixel
                 int px = x + i;
                 int py = y + j;
-                if (px >= 0 && px < textureSize && py >= 0 && py < textureSize)
+                
+                //continue if this pixel is out of range
+                if (px < 0 || px >= textureSize || py < 0 || py >= textureSize) continue;
+                
+                //draw
+                float dist = Vector2.Distance(new Vector2(px, py), new Vector2(x, y));
+                if (dist < brushSize)
                 {
-                    float dist = Vector2.Distance(new Vector2(px, py), new Vector2(x, y));
-                    if (dist < brushSize) // circular brush
-                        paintTex.SetPixel(px, py, brushColor);
+                    paintTex.SetPixel(px, py, brushColor);
                 }
             }
         }

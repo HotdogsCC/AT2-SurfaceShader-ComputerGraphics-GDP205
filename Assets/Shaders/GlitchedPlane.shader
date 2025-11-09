@@ -2,22 +2,25 @@ Shader "Charlie/GlitchedPlane"
 {
     Properties
     {
+        //normal map for this material
         _NormalMap ("Normal Map", 2D) = "bump" {}
         
         [Space]
         
-        //for the spikes
+        //used by the 'spikes' to push vertices up based on this map
         _HeightMap ("Height Map", 2D) = "black" {}
         
         [Space]
         
+        //texture that gets displayed as the vertices are pushed up
         _OuterTexture ("Outer Texture", 2D) = "white" {}
+        
+        //texture that is displayed when the vertices are not pushed up
         _InnerTexture ("Inner Texture", 2D) = "white" {}
         
         [Space]
         
-        //where the glitch effect will take place
-        //black for off, anything else for on
+        //where the glitch effect can take place
         _GlitchMap ("Glitch Map", 2D) = "white" {}
 
         [Space]
@@ -31,6 +34,12 @@ Shader "Charlie/GlitchedPlane"
         //how high the spikes are
         _MaxHeight ("Max Height", Float) = 0.5
         
+        //specular properties
+        _SpecularStrength ("Specular Strength", Float) = 1.0
+        _Shininess ("Shininess", Float) = 1.0
+        _SpecularColor ("Specular Colour", Color) = (1.0, 1.0, 1.0)
+        
+        //the strength of the ambient light
         _AmbientStrength ("Ambient Strength", Range(0.0, 1.0)) = 0.5
     }
     SubShader
@@ -48,9 +57,7 @@ Shader "Charlie/GlitchedPlane"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-
-            //#include "UnityCG.cginc"
-            //#include "Lighting.cginc"
+            
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
@@ -73,21 +80,23 @@ Shader "Charlie/GlitchedPlane"
                 float3x3 TBN : TEXCOORD2;
             };
 
-            
+            //textures
             sampler2D _NormalMap;
             sampler2D _HeightMap;
             sampler2D _GlitchMap;
-
             sampler2D _OuterTexture;
             sampler2D _InnerTexture;
 
-
+            //floats
             CBUFFER_START(UnityPerMaterial)
             float _XSpeed;
             float _YSpeed;
             float3 _RotationSpeeds;
 
             float _MaxHeight;
+            float _SpecularStrength;
+            float _Shininess;
+            float4 _SpecularColor;
             float _AmbientStrength;
             CBUFFER_END
 
@@ -117,13 +126,12 @@ Shader "Charlie/GlitchedPlane"
                 
                 //sample the glitch map
                 float4 glitchSample = tex2Dlod(_GlitchMap, float4(o.uv[0], o.uv[1], 0, 0));
-                //only apply height if isnt 0
-                float height = 0;
+                
                 //sample the height map
                 float uSample = o.uv[0] + (_Time[0] * _XSpeed);
                 float vSample = o.uv[1] + (_Time[0] * _YSpeed);
                 float4 heightSample = tex2Dlod(_HeightMap, float4(uSample, vSample, 0, 0)) * glitchSample;
-                height = heightSample[0];
+                float height = heightSample[0];
 
                 //add it to the height
                 float3 normal = v.normal;
@@ -170,11 +178,18 @@ Shader "Charlie/GlitchedPlane"
                 float NdotL = saturate(dot(normalWS, lightDir));
                 float3 diffuse = NdotL * lightColor;
 
+                //specular
+                float3 viewDir = GetViewForwardDir();
+                float3 halfVector = normalize(lightDir + viewDir);
+                float clampedSpecValue = saturate(dot(halfVector, i.normal));
+                float specularPower = pow(clampedSpecValue, _SpecularStrength * _Shininess);
+                float3 specular = _SpecularColor.rgb * specularPower * lightColor;
+
                 //ambient
                 float3 ambient = _AmbientStrength * lightColor;
 
                 //total
-                return (diffuse + ambient) * albedo;
+                return (diffuse + specular+ ambient) * albedo;
             }
             ENDHLSL
         }
