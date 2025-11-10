@@ -78,23 +78,28 @@ Shader "Charlie/GlitchedPlane"
                 float4 vertex : SV_POSITION;
                 float height : TEXCOORD1; //how much extra height was added in the vert
             };
+            
+            //constants buffer
+            CBUFFER_START(UnityPerMaterial)
 
             //textures
             sampler2D _NormalMap;
             sampler2D _HeightMap;
-            sampler2D _GlitchMap;
             sampler2D _OuterTexture;
             sampler2D _InnerTexture;
+            sampler2D _GlitchMap;
 
-            //floats
-            CBUFFER_START(UnityPerMaterial)
+            //glitch
             float _XSpeed;
             float _YSpeed;
-
             float _MaxHeight;
+
+            //specular 
             float _SpecularStrength;
             float _Shininess;
             float4 _SpecularColor;
+
+            //ambient
             float _AmbientStrength;
             CBUFFER_END
             
@@ -111,19 +116,21 @@ Shader "Charlie/GlitchedPlane"
                 //sample the glitch map
                 float4 glitchSample = tex2Dlod(_GlitchMap, float4(o.uv[0], o.uv[1], 0, 0));
                 
-                //sample the height map
+                //scroll the height map
                 float uSample = o.uv[0] + (_Time[0] * _XSpeed);
                 float vSample = o.uv[1] + (_Time[0] * _YSpeed);
+
+                //sample the height map
                 float4 heightSample = tex2Dlod(_HeightMap, float4(uSample, vSample, 0, 0)) * glitchSample;
                 float height = heightSample[0];
 
-                //add it to the height
+                //pertrude the vertex along its normal based on height sample
                 float3 normal = v.normal;
                 normal *= height * _MaxHeight;
                 o.vertex += float4(normal, 0);
                 
-                //apply the height
-                o.vertex = TransformObjectToHClip(o.vertex);
+                //transform the height into clip space
+                o.vertex = TransformObjectToHClip(o.vertex.xyz);
 
                 //save the height
                 o.height = length(normal);
@@ -135,29 +142,33 @@ Shader "Charlie/GlitchedPlane"
             //fragment shader
             float3 frag (v2f i) : SV_Target
             {
-                //albedo
+                //-- albedo --
+                //get the height of this frag
                 float height = i.height / _MaxHeight;
+                height = saturate(height);
+
+                //blend textures based on height
                 float4 outerColour = tex2D(_OuterTexture, i.uv);
                 float4 innerColour = tex2D(_InnerTexture, i.uv);
                 float4 albedo = (outerColour * height) + (innerColour * (1 - height)); //blend between outer and inner colours
 
-                //diffuse
+                //-- diffuse --
                 float3 lightDir = GetMainLight().direction;
                 float3 lightColor = GetMainLight().color;
                 float NdotL = saturate(dot(i.normal, lightDir));
                 float3 diffuse = NdotL * lightColor;
 
-                //specular
+                //-- specular --
                 float3 viewDir = GetViewForwardDir();
                 float3 halfVector = normalize(lightDir + viewDir);
                 float clampedSpecValue = saturate(dot(halfVector, i.normal));
                 float specularPower = pow(clampedSpecValue, _SpecularStrength * _Shininess);
                 float3 specular = _SpecularColor.rgb * specularPower * lightColor;
 
-                //ambient
+                //-- ambient --
                 float3 ambient = _AmbientStrength * lightColor;
 
-                //total
+                //-- total --
                 return (diffuse + specular+ ambient) * albedo;
             }
             ENDHLSL

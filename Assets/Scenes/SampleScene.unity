@@ -367,7 +367,7 @@ GameObject:
   - component: {fileID: 450545297}
   - component: {fileID: 450545299}
   m_Layer: 0
-  m_Name: Drawer
+  m_Name: Collider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

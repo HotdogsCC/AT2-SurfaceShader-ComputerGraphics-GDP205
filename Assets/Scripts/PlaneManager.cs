@@ -13,7 +13,7 @@ public class PlaneManager : MonoBehaviour
     private TextureDrawer lowPolyTextureDrawer;
     
     //defines which plane is enabled
-    private bool isHighResEnabled = false;
+    private bool isHighResEnabled = true;
 
     private void Start()
     {
